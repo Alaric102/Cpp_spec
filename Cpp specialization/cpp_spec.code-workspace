@@ -9,7 +9,8 @@
 			"*.tcc": "cpp",
 			"sstream": "cpp",
 			"deque": "cpp",
-			"iosfwd": "cpp"
+			"iosfwd": "cpp",
+			"iostream": "cpp"
 		}
 	}
 }
