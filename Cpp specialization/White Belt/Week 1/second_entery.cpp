@@ -7,11 +7,11 @@ int main(){
     int position = 0, counter = -2;
     cin >> line;
     for (auto ch : line){
-        if (ch == 'f')
-            counter++;
-        if (counter == 0){
-            cout << position << endl;
-            return 0;
+        if (ch == 'f'){
+            if (++counter == 0){
+                cout << position << endl;
+                return 0;
+            }
         }
         position++;
     }
