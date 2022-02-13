@@ -71,13 +71,66 @@ private:
   }
 };
 
+class PageManager {
+public:
+  PageManager(): 
+  user_to_page_(MAX_USER_COUNT_ + 1, 0), 
+  pages(MAX_PAGE_COUNT_ + 1, {0, 0}) {}
+
+  void Read(int user_id, int page_count){
+    int old_page_count = user_to_page_[user_id];
+    user_to_page_[user_id] = page_count;
+    if (old_page_count == 0){
+      user_count++;
+    }
+    
+    pages[old_page_count].users_current--;
+    for (old_page_count; old_page_count < page_count; ++old_page_count)
+      pages[old_page_count].users_after++;
+    pages[page_count].users_current++;
+  }
+
+  double Cheer(int user_id) const {
+    int page_num = user_to_page_[user_id];
+    if (page_num == 0)
+      return 0.0;
+    
+    if (user_count == 1){
+      return 1.0;
+    }
+
+    double res =  (user_count - (pages[page_num].users_after + pages[page_num].users_current) * 1.0) / (user_count - 1);
+    return res;
+  }
+
+  void PrintUser2Pages(){
+    for (int i = 0; i < 10; ++i){
+      if (user_to_page_[i])
+        cout << "user " << i << " : " << user_to_page_[i] << endl;
+    }
+    cout << "User count: " << user_count << endl;
+  };
+
+private:
+  struct Page
+  {
+    int users_after = 0;
+    int users_current = 0;
+  };
+  
+  static const int MAX_USER_COUNT_ = 100'000;
+  static const int MAX_PAGE_COUNT_ = 1'000;
+
+  vector<int> user_to_page_;
+  vector<Page> pages;
+  int user_count = 0;
+};
 
 int main() {
   ios::sync_with_stdio(false);
   cin.tie(nullptr);
 
-  ReadingManager manager;
-
+  PageManager manager;
   int query_count;
   cin >> query_count;
 
