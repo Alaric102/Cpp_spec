@@ -12,14 +12,14 @@ public:
         sorted_users_(),
         user_positions_(MAX_USER_COUNT_ + 1, -1) {}
 
-  void Read(int user_id, int page_count) {
-    if (user_page_counts_[user_id] == 0) {
-      AddUser(user_id);
+  void Read(int user_id, int page_count) {        // O(N)
+    if (user_page_counts_[user_id] == 0) {        // O(c)
+      AddUser(user_id);                           // O(c)
     }
     user_page_counts_[user_id] = page_count;
     int& position = user_positions_[user_id];
-    while (position > 0 && page_count > user_page_counts_[sorted_users_[position - 1]]) {
-      SwapUsers(position, position - 1);
+    while (position > 0 && page_count > user_page_counts_[sorted_users_[position - 1]]) {   // O(N) * O(c)
+      SwapUsers(position, position - 1);          // O(c)
     }
   }
 
@@ -33,6 +33,8 @@ public:
     }
     const int page_count = user_page_counts_[user_id];
     int position = user_positions_[user_id];
+
+    // O(N^2)
     while (position < user_count &&
       user_page_counts_[sorted_users_[position]] == page_count) {
       ++position;
@@ -52,14 +54,16 @@ private:
   vector<int> sorted_users_;
   vector<int> user_positions_;
 
-  int GetUserCount() const {
+  int GetUserCount() const {                              // O(c)
     return sorted_users_.size();
   }
-  void AddUser(int user_id) {
-    sorted_users_.push_back(user_id);
-    user_positions_[user_id] = sorted_users_.size() - 1;
+
+  void AddUser(int user_id) {                             // O(c)
+    sorted_users_.push_back(user_id);                     // O(c)
+    user_positions_[user_id] = sorted_users_.size() - 1;  // O(c)
   }
-  void SwapUsers(int lhs_position, int rhs_position) {
+
+  void SwapUsers(int lhs_position, int rhs_position) {    // O(c)
     const int lhs_id = sorted_users_[lhs_position];
     const int rhs_id = sorted_users_[rhs_position];
     swap(sorted_users_[lhs_position], sorted_users_[rhs_position]);
@@ -86,9 +90,9 @@ int main() {
     if (query_type == "READ") {
       int page_count;
       cin >> page_count;
-      manager.Read(user_id, page_count);
+      manager.Read(user_id, page_count);                            // O(N)
     } else if (query_type == "CHEER") {
-      cout << setprecision(6) << manager.Cheer(user_id) << "\n";
+      cout << setprecision(6) << manager.Cheer(user_id) << "\n";    // O(N)
     }
   }
 
