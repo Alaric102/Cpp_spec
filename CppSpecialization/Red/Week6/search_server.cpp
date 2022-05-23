@@ -41,7 +41,7 @@ void SearchServer::UpdateDocumentBase(istream& document_input) {
     new_index.Add(move(current_document));
   }
 
-  index = move(new_index);
+  swap(new_index, index);
 }
 
 void SearchServer::AddQueriesStream(istream& query_input, ostream& search_results_output) {
