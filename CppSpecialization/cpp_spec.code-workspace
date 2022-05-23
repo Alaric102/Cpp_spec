@@ -76,7 +76,19 @@
 			"xtr1common": "cpp",
 			"xtree": "cpp",
 			"xutility": "cpp",
-			"future": "cpp"
+			"future": "cpp",
+			"cstdarg": "cpp",
+			"cwctype": "cpp",
+			"*.tcc": "cpp",
+			"bitset": "cpp",
+			"complex": "cpp",
+			"condition_variable": "cpp",
+			"functional": "cpp",
+			"memory_resource": "cpp",
+			"fstream": "cpp",
+			"mutex": "cpp",
+			"thread": "cpp",
+			"cinttypes": "cpp"
 		},
 		"ros.distro": "noetic"
 	}
