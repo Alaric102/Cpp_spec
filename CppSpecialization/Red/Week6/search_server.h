@@ -10,6 +10,9 @@
 #include <string_view>
 #include <deque>
 
+// Parallel pipelinie
+#include <future>
+
 using namespace std;
 
 // vector<string> SplitIntoWords(const string& line);
@@ -19,14 +22,14 @@ class InvertedIndex {
 public:
   void Add(string&& document);
   
-  deque<pair<size_t, size_t>> Lookup(const string_view word) const;
+  vector<pair<size_t, size_t>> Lookup(const string_view word) const;
 
   const string& GetDocument(size_t id) const {
     return docs[id];
   }
 
 private:  
-  map<string_view, deque<pair<size_t, size_t>>> frequency_index;
+  map<string_view, vector<pair<size_t, size_t>>> frequency_index;
   deque<string> docs;
 };
 
@@ -42,4 +45,7 @@ public:
 
 private:
   InvertedIndex index;
+
+  vector<future<void>> futures;
+  mutex m;
 };

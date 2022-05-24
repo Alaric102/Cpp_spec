@@ -6,17 +6,12 @@
 #include <sstream>
 #include <iostream>
 
-// vector<string> SplitIntoWords(const string& line) {
-//   istringstream words_input(line);
-//   return {istream_iterator<string>(words_input), istream_iterator<string>()};
-// }
-
 deque<std::string_view> SplitIntoWords(string_view line){
   deque<std::string_view> res;
   size_t first = line.find_first_not_of(' ', 0);
-  while (true) {                                                    // O(W), W - words count
-    size_t space_pos = line.find(' ', first);                       // O(L), L string length
-    res.emplace_back(line.substr(first, space_pos - first));           // O(1) amortized
+  while (true) {                                                        // O(W), W - words count
+    size_t space_pos = line.find(' ', first);                           // O(L), L string length
+    res.emplace_back(line.substr(first, space_pos - first));            // O(1) amortized
 
     if (space_pos == line.npos){
       break;
@@ -26,7 +21,6 @@ deque<std::string_view> SplitIntoWords(string_view line){
         break;
     }
   }
-  
   return res;
 }
 
@@ -40,57 +34,71 @@ void SearchServer::UpdateDocumentBase(istream& document_input) {
   for (string current_document; getline(document_input, current_document); ) {  //O(D), D - docs number
     new_index.Add(move(current_document));
   }
-
-  swap(new_index, index);
+  
+  // Lock index for updating
+  {
+    lock_guard<mutex> lock(m);
+    swap(new_index, index);
+  }
 }
 
 void SearchServer::AddQueriesStream(istream& query_input, ostream& search_results_output) {
+  auto future = [&query_input, &search_results_output, this]() {
+    vector<size_t> doc_rate(50'000);      // accumulate document hitcount
+    vector<size_t> doc_id_found(50'000);  //accumulate doc ID which was meet
 
-  vector<size_t> doc_rate(50'000);      // accumulate document hitcount
-  vector<size_t> doc_id_found(50'000);  //accumulate doc ID which was meet
+    for (string current_query; getline(query_input, current_query); ) {
+      size_t counter = 0;                 // store number of found events
 
-  for (string current_query; getline(query_input, current_query); ) {
-    size_t counter = 0;                 // store number of found events
-
-    for (const auto& word : SplitIntoWords(current_query)) {
-      for (const auto [docid, hitcount] : index.Lookup(word)) {
-        if (doc_rate[docid] == 0){
-          doc_id_found[counter++] = docid;
+      for (const auto& word : SplitIntoWords(current_query)) {
+        
+        // Lock index for LookUp method
+        vector<pair<size_t, size_t>> looking_in;
+        {
+          lock_guard<mutex> lockSearch(m);
+          looking_in = index.Lookup(word);
         }
-        doc_rate[docid] += hitcount;
+
+        for (const auto& [docid, hitcount] : looking_in) {
+          if (doc_rate[docid] == 0){
+            doc_id_found[counter++] = docid;
+          }
+          doc_rate[docid] += hitcount;
+        }
       }
-    }
 
-    vector<pair<size_t, size_t>> search_results;
-    for (size_t docid = 0; docid < counter; ++docid) {
-      size_t count = 0;
-      size_t id = 0;
-      std::swap(count, doc_rate[doc_id_found[docid]]);
-      std::swap(id, doc_id_found[docid]);
-      search_results.emplace_back(id, count);
-    }
-
-    partial_sort(
-      begin(search_results),
-      begin(search_results) + min<size_t>(5, search_results.size()),
-      end(search_results),
-      [](pair<size_t, size_t> lhs, pair<size_t, size_t> rhs) {
-        int64_t lhs_docid = lhs.first;
-        auto lhs_hit_count = lhs.second;
-        int64_t rhs_docid = rhs.first;
-        auto rhs_hit_count = rhs.second;
-        return make_pair(lhs_hit_count, -lhs_docid) > make_pair(rhs_hit_count, -rhs_docid);
+      vector<pair<size_t, size_t>> search_results;
+      for (size_t docid = 0; docid < counter; ++docid) {
+        size_t count = 0;
+        size_t id = 0;
+        std::swap(count, doc_rate[doc_id_found[docid]]);
+        std::swap(id, doc_id_found[docid]);
+        search_results.emplace_back(id, count);
       }
-    );
 
-    search_results_output << current_query << ':';
-    for (auto [docid, hitcount] : Head(search_results, 5)) {
-      search_results_output << " {"
-        << "docid: " << docid << ", "
-        << "hitcount: " << hitcount << '}';
+      partial_sort(
+        begin(search_results),
+        begin(search_results) + min<size_t>(5, search_results.size()),
+        end(search_results),
+        [](pair<size_t, size_t> lhs, pair<size_t, size_t> rhs) {
+          int64_t lhs_docid = lhs.first;
+          auto lhs_hit_count = lhs.second;
+          int64_t rhs_docid = rhs.first;
+          auto rhs_hit_count = rhs.second;
+          return make_pair(lhs_hit_count, -lhs_docid) > make_pair(rhs_hit_count, -rhs_docid);
+        }
+      );
+
+      search_results_output << current_query << ':';
+      for (auto [docid, hitcount] : Head(search_results, 5)) {
+        search_results_output << " {"
+          << "docid: " << docid << ", "
+          << "hitcount: " << hitcount << '}';
+      }
+      search_results_output << endl;
     }
-    search_results_output << endl;
-  }
+  };
+  futures.push_back(std::async(future));
 }
 
 void InvertedIndex::Add(string&& document) {
@@ -114,7 +122,7 @@ void InvertedIndex::Add(string&& document) {
   }
 }
 
-deque<pair<size_t, size_t>> InvertedIndex::Lookup(const string_view word) const {
+vector<pair<size_t, size_t>> InvertedIndex::Lookup(const string_view word) const {
   if (auto it = frequency_index.find(word); it != frequency_index.end()) {
     return it->second;
   } else {
