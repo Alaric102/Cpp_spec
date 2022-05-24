@@ -11,12 +11,12 @@
 //   return {istream_iterator<string>(words_input), istream_iterator<string>()};
 // }
 
-deque<std::string_view>SplitIntoWords(string_view line){
+deque<std::string_view> SplitIntoWords(string_view line){
   deque<std::string_view> res;
   size_t first = line.find_first_not_of(' ', 0);
   while (true) {                                                    // O(W), W - words count
     size_t space_pos = line.find(' ', first);                       // O(L), L string length
-    res.push_back(line.substr(first, space_pos - first));           // O(1) amortized
+    res.emplace_back(line.substr(first, space_pos - first));           // O(1) amortized
 
     if (space_pos == line.npos){
       break;
@@ -106,7 +106,7 @@ void InvertedIndex::Add(string&& document) {
       // If current word has never appeared or 
       // word doesn't have assotiation with current docID
       // Append new pair for word with {docID, hitpoint = 1}
-      word_freq.push_back(make_pair(docid, 1));
+      word_freq.emplace_back(docid, 1);
     } else {
       // If word was meet for this docID, increase hitpoint
       word_freq.back().second++;
@@ -114,7 +114,7 @@ void InvertedIndex::Add(string&& document) {
   }
 }
 
-list<pair<size_t, size_t>> InvertedIndex::Lookup(const string_view word) const {
+deque<pair<size_t, size_t>> InvertedIndex::Lookup(const string_view word) const {
   if (auto it = frequency_index.find(word); it != frequency_index.end()) {
     return it->second;
   } else {
